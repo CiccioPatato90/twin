@@ -167,20 +167,20 @@ history = {
     "repulsion": []
 }
 
-def on_generation(ga_instance):
-    """
-    Callback running at the end of every generation.
-    We use this to log the specific sub-metrics of the BEST solution.
-    """
-    best_sol, best_fit, _ = ga_instance.best_solution()
-    decoded = decode_solution(best_sol)
+# def on_generation(ga_instance):
+    # """
+    # Callback running at the end of every generation.
+    # We use this to log the specific sub-metrics of the BEST solution.
+    # """
+    # best_sol, best_fit, _ = ga_instance.best_solution()
+    # decoded = decode_solution(best_sol)
     
-    # Re-calc specific stats for logging
-    history["fitness"].append(best_fit)
-    history["connectivity"].append(calc_connectivity(decoded))
-    history["coverage"].append(calculate_coverage(decoded))
-    history["link_quality"].append(calculate_mean_link_quality(decoded))
-    history["repulsion"].append(calculate_repulsion_penalty(decoded))
+    # # Re-calc specific stats for logging
+    # history["fitness"].append(best_fit)
+    # history["connectivity"].append(calc_connectivity(decoded))
+    # history["coverage"].append(calculate_coverage(decoded))
+    # history["link_quality"].append(calculate_mean_link_quality(decoded))
+    # history["repulsion"].append(calculate_repulsion_penalty(decoded))
     
     # print(f"Gen {ga_instance.generations_completed} | Fitness: {best_fit:.4f}")
 
@@ -205,7 +205,7 @@ def main():
         crossover_type="uniform",
         mutation_type="random",
         mutation_percent_genes=10,      # Mutate 10% of genes
-        on_generation=on_generation,
+        # on_generation=on_generation,
         suppress_warnings=True,
     )
 
@@ -215,73 +215,51 @@ def main():
     # ---------------------------------------------------------
     # 5. VISUALIZATION
     # ---------------------------------------------------------
-    # ga_instance.summary()
-
-
-    # 1. Metric Evolution
-    # plt.figure(figsize=(10, 6))
     
-    # Normalize for clean plotting
-    # def norm_data(d):
-    #     return (d - np.min(d)) / (np.max(d) - np.min(d) + 1e-6)
-
-    # plt.plot(norm_data(history['connectivity']), label='Connectivity')
-    # plt.plot(norm_data(history['link_quality']), label='Link Quality')
-    # plt.plot(norm_data(history['coverage']), label='Coverage')
-    # plt.plot(norm_data(history['repulsion']), label='Repulsion')
-    # plt.plot(norm_data(history['fitness']), 'k--', linewidth=2, label='Fitness')
-    
-    # plt.title("Normalized Metrics over Generations")
-    # plt.xlabel("Generation")
-    # plt.legend()
-    # plt.show()
-
-    # 2. Final Drone Positions
     best_sol, _, _ = ga_instance.best_solution()
+
     final_pos = decode_solution(best_sol)
 
+    history = {
+        "connectivity": calc_connectivity(final_pos),
+        "coverage": calculate_coverage(final_pos),
+        "link_quality": calculate_mean_link_quality(final_pos)
+    }
 
-
-    # plt.figure(figsize=(6, 6))
-    # plt.xlim(0, MAX_X)
-    # plt.ylim(0, MAX_Y)
-    # plt.grid(True, alpha=0.3)
-    # xs = [p.x for p in final_pos]
-    # ys = [p.y for p in final_pos]
-    # plt.scatter(xs, ys, s=100, c='red', label='Drones')
-    # # Draw connections
-    # for i in range(M):
-    #     for j in range(i+1, M):
-    #         plt.plot([final_pos[i].x, final_pos[j].x], 
-    #                  [final_pos[i].y, final_pos[j].y], 'b-', alpha=0.1)
-    # # Draw sensing radius
-    # ax = plt.gca()
-    # for p in final_pos:
-    #     circle = plt.Circle((p.x, p.y), r, color='green', fill=False, linestyle='--', alpha=0.5)
-    #     ax.add_patch(circle)
-    # plt.title("Final Drone Placement")
-    # plt.legend()
-    # plt.show()
+    return [history["connectivity"], history["coverage"], history["link_quality"]]
 
 if __name__ == "__main__":
     
     test_values = np.linspace(0, 10, 3).astype(int) 
-    for val in test_values:
-        for val2 in test_values:
-            for val3 in test_values:
-                for val4 in test_values:
+
+    results_conn = np.zeros((len(test_values), len(test_values), len(test_values), len(test_values)))
+    results_coverage = np.zeros((len(test_values), len(test_values), len(test_values), len(test_values)))
+    results_lq = np.zeros((len(test_values), len(test_values), len(test_values), len(test_values)))
+
+    print("results.shape: ", results_conn.shape)
+
+    for i, val in enumerate(test_values):
+        for j, val2 in enumerate(test_values):
+            for k, val3 in enumerate(test_values):
+                for l, val4 in enumerate(test_values):
                     global alpha, beta, gamma, delta
                     alpha = float(val)
                     beta = float(val2)
                     gamma = float(val3)
                     delta = float(val4)
                     print(f"Running with alpha: {alpha}, beta: {beta}, gamma: {gamma}, delta: {delta}")
-                    # main()
+                    history = main()
+                    results_conn[i, j, k, l] = history[0]
+                    results_coverage[i, j, k, l] = history[1]
+                    results_lq[i, j, k, l] = history[2]
+
+                    print("results_conn: ", results_conn)
+                    print("results_coverage: ", results_coverage)
+                    print("results_lq: ", results_lq)
+                    print("--------------------------------")
                     # main(val, val2, val3, val4)
                     # valore di lq medio per alpha = 0 
                     # valore di lq medio per alpha = 10    
-
-    sys.exit(0)
     
 
     
