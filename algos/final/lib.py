@@ -185,7 +185,72 @@ history = {
     # print(f"Gen {ga_instance.generations_completed} | Fitness: {best_fit:.4f}")
 
 # ---------------------------------------------------------
-# 4. MAIN EXECUTION
+# 4. VISUALIZATION FUNCTIONS
+# ---------------------------------------------------------
+
+def plot_solution(solution, title="Drone Formation Solution"):
+    """
+    Plot the drone positions with sensing radius and connections.
+    
+    Args:
+        solution: List of Position objects representing drone positions
+        title: Title for the plot
+    """
+    fig, ax = plt.subplots(figsize=(10, 10))
+    
+    # Extract x and y coordinates
+    x_coords = [pos.x for pos in solution]
+    y_coords = [pos.y for pos in solution]
+    
+    # Plot sensing radius circles for each drone
+    for i, pos in enumerate(solution):
+        circle = plt.Circle((pos.x, pos.y), r, color='lightblue', 
+                           alpha=0.3, fill=True, label='Sensing Radius' if i == 0 else '')
+        ax.add_patch(circle)
+    
+    # Plot connections between drones (if within reasonable distance)
+    connection_threshold = 30  # Only show connections within this distance
+    for i in range(M):
+        for j in range(i+1, M):
+            dist = norm(solution[i], solution[j])
+            if dist < connection_threshold:
+                ax.plot([solution[i].x, solution[j].x], 
+                       [solution[i].y, solution[j].y], 
+                       'gray', alpha=0.3, linewidth=1, linestyle='--')
+    
+    # Plot drone positions
+    ax.scatter(x_coords, y_coords, c='red', s=200, marker='o', 
+              edgecolors='black', linewidths=2, zorder=5, label='Drones')
+    
+    # Label drones
+    for i, pos in enumerate(solution):
+        ax.annotate(f'D{i+1}', (pos.x, pos.y), xytext=(5, 5), 
+                   textcoords='offset points', fontsize=10, fontweight='bold')
+    
+    # Set plot properties
+    ax.set_xlim(-5, MAX_X + 5)
+    ax.set_ylim(-5, MAX_Y + 5)
+    ax.set_xlabel('X Position', fontsize=12)
+    ax.set_ylabel('Y Position', fontsize=12)
+    ax.set_title(title, fontsize=14, fontweight='bold')
+    ax.grid(True, alpha=0.3)
+    ax.set_aspect('equal')
+    ax.legend(loc='upper right')
+    
+    # Add metrics text box
+    conn = calc_connectivity(solution)
+    cov = calculate_coverage(solution)
+    lq = calculate_mean_link_quality(solution)
+    metrics_text = f'Connectivity: {conn:.4f}\nCoverage: {cov:.4f}\nLink Quality: {lq:.4f}'
+    ax.text(0.02, 0.98, metrics_text, transform=ax.transAxes, 
+           fontsize=10, verticalalignment='top',
+           bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+    
+    plt.tight_layout()
+    plt.show()
+
+# ---------------------------------------------------------
+# 5. MAIN EXECUTION
 # ---------------------------------------------------------
 
 def main():
@@ -216,9 +281,12 @@ def main():
     # 5. VISUALIZATION
     # ---------------------------------------------------------
     
-    best_sol, _, _ = ga_instance.best_solution()
+    best_sol, best_fitness, _ = ga_instance.best_solution()
 
     final_pos = decode_solution(best_sol)
+    
+    # Plot the solution
+    plot_solution(final_pos, title=f"Best Solution (Fitness: {best_fitness:.4f})")
 
     history = {
         "connectivity": calc_connectivity(final_pos),
@@ -229,37 +297,13 @@ def main():
     return [history["connectivity"], history["coverage"], history["link_quality"]]
 
 if __name__ == "__main__":
-    
-    test_values = np.linspace(0, 10, 3).astype(int) 
+    global alpha, beta, gamma, delta
+    alpha = float(sys.argv[1])
+    beta = float(sys.argv[2])
+    gamma = float(sys.argv[3])
+    delta = float(sys.argv[4])
+    print(f"Running with alpha: {alpha}, beta: {beta}, gamma: {gamma}, delta: {delta}")
+    main()
 
-    results_conn = np.zeros((len(test_values), len(test_values), len(test_values), len(test_values)))
-    results_coverage = np.zeros((len(test_values), len(test_values), len(test_values), len(test_values)))
-    results_lq = np.zeros((len(test_values), len(test_values), len(test_values), len(test_values)))
-
-    print("results.shape: ", results_conn.shape)
-
-    for i, val in enumerate(test_values):
-        for j, val2 in enumerate(test_values):
-            for k, val3 in enumerate(test_values):
-                for l, val4 in enumerate(test_values):
-                    global alpha, beta, gamma, delta
-                    alpha = float(val)
-                    beta = float(val2)
-                    gamma = float(val3)
-                    delta = float(val4)
-                    print(f"Running with alpha: {alpha}, beta: {beta}, gamma: {gamma}, delta: {delta}")
-                    history = main()
-                    results_conn[i, j, k, l] = history[0]
-                    results_coverage[i, j, k, l] = history[1]
-                    results_lq[i, j, k, l] = history[2]
-
-                    print("results_conn: ", results_conn)
-                    print("results_coverage: ", results_coverage)
-                    print("results_lq: ", results_lq)
-                    print("--------------------------------")
-                    # main(val, val2, val3, val4)
-                    # valore di lq medio per alpha = 0 
-                    # valore di lq medio per alpha = 10    
-    
 
     

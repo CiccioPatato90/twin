@@ -322,7 +322,7 @@ async def run_parallel_optimizations(test_values, results_conn, results_coverage
 
 if __name__ == "__main__":
     
-    test_values = np.linspace(0, 100, 10).astype(int) 
+    test_values = np.linspace(0, 100, 5).astype(int) 
 
     results_conn = np.zeros((len(test_values), len(test_values), len(test_values), len(test_values)))
     results_coverage = np.zeros((len(test_values), len(test_values), len(test_values), len(test_values)))
