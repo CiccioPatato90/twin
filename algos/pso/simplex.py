@@ -1,25 +1,36 @@
 import math
 
 import numpy as np
+from common import Logger
+
+logger = Logger("nm.txt")
+
+temp_log = float("inf")
 
 
 def cost(position):
     # note: const = -fitness
+    global temp_log
     fitnessVal = 0.0
     for i in range(len(position)):
         xi = position[i]
         fitnessVal += (xi * xi) - (10 * math.cos(2 * math.pi * xi)) + 10
+    logger.increment()
+
+    if fitnessVal < temp_log:
+        temp_log = fitnessVal
+    logger._write_value(f"SIMPLEX: {temp_log}")
     return fitnessVal
 
 
-def nm(simplex, max_iterations):
-    evaluations = 0
-
+def nm(simplex, max_iterations, best_swarm_fitnessVal):
     # Need a loop to iterate
+    global temp_log
+    temp_log = best_swarm_fitnessVal
+
     for iteration in range(max_iterations):
         # 1. Sort [cite: 11]
         simplex.sort(key=cost)
-        evaluations += 1
 
         print(simplex)
 
@@ -105,24 +116,9 @@ def nm(simplex, max_iterations):
         max_cost_diff = max(diff_fv, diff_fw)
 
         if max_dist < epsilon_x and max_cost_diff < epsilon_f:
-            # best_cost = cost(simplex[0])
-            # best_pos = None
-            # for pos in simplex:
-            #     print("pos: ", pos)
-            #     new_cost = cost(pos)
-            #     if new_cost > best_cost:
-            #         best_pos = pos
-            #         best_cost = new_cost
-            # return best_pos, evaluations, cost(best_cost)
             simplex.sort(key=cost)
-            return simplex[0], evaluations
-    return simplex, evaluations
-
-
-# simplex = [
-#     np.array([-1.2, 1.0]),  # Start Point
-#     np.array([-1.0, 1.0]),  # Neighbor 1
-#     np.array([-1.2, 1.2]),  # Neighbor 2
-# ]
-# result = nm(simplex, 100)
-# print(f"Converged! reuslt: {result}")
+            print("Simplex converged! ", simplex)
+            return simplex[0]
+    print("Simplex NOT converged! ", simplex)
+    simplex.sort(key=cost)
+    return simplex[0]

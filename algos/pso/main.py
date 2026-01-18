@@ -11,26 +11,51 @@
 import copy  # array-copying convenience
 import math  # cos() for Rastrigin
 import random
-import sys  # max float
+import sys
 
 import numpy as np
+from common import Logger
 from simplex import nm
 
 # -------fitness functions---------
 
 ENABLE_NM = True
 
+logger = Logger("nm.txt")
+
+temp_log = float("inf")
+
 
 # rastrigin function
 def fitness_rastrigin(position):
+    global temp_log
     fitnessVal = 0.0
     for i in range(len(position)):
         xi = position[i]
         fitnessVal += (xi * xi) - (10 * math.cos(2 * math.pi * xi)) + 10
+    logger.increment()
+    if fitnessVal < temp_log:
+        temp_log = fitnessVal
+    logger._write_value(f"SWARM: {temp_log}")
     return fitnessVal
 
 
 # -------------------------
+
+
+class Swarm:
+    def __init__(self, n_particles, dim, fitness, minx, maxx):
+        self.swarm = [Particle(fitness, dim, minx, maxx, i) for i in range(n_particles)]
+        self.n_particles = n_particles
+        self.dim = dim
+        self.minx = minx
+        self.maxx = maxx
+        # compute the value of best_position and best_fitness in swarm
+        self.best_swarm_pos = [0.0 for i in range(dim)]
+        self.best_swarm_fitnessVal = sys.float_info.max  # swarm best
+
+    def best_solution(self):
+        return self.best_swarm_pos, self.best_swarm_fitnessVal
 
 
 # particle class
@@ -89,29 +114,25 @@ class Particle:
 
 
 # particle swarm optimization function
-def pso(fitness, max_iter, n, dim, minx, maxx):
+def pso(swarm_ext, max_iter):
     # hyper parameters
     w = 0.729  # inertia
     c1 = 1.49445  # cognitive (particle)
     c2 = 1.49445  # social (swarm)
 
     rnd = random.Random(0)
+    swarm = copy.copy(swarm_ext)
 
-    # create n random particles
-    swarm = [Particle(fitness, dim, minx, maxx, i) for i in range(n)]
-
-    # compute the value of best_position and best_fitness in swarm
-    best_swarm_pos = [0.0 for i in range(dim)]
-    best_swarm_fitnessVal = sys.float_info.max  # swarm best
+    global temp_log
+    temp_log = swarm.best_swarm_fitnessVal
 
     # computer best particle of swarm and it's fitness
-    for i in range(n):  # check each particle
-        if swarm[i].fitness < best_swarm_fitnessVal:
-            best_swarm_fitnessVal = swarm[i].fitness
-            best_swarm_pos = copy.copy(swarm[i].position)
+    for i in range(swarm.n_particles):  # check each particle
+        if swarm.swarm[i].fitness < swarm.best_swarm_fitnessVal:
+            swarm.best_swarm_fitnessVal = swarm.swarm[i].fitness
+            swarm.best_swarm_pos = copy.copy(swarm.swarm[i].position)
 
     # num_discovered_points, only new ones
-    evaluations = 0
 
     # main loop of pso
     Iter = 0
@@ -120,90 +141,68 @@ def pso(fitness, max_iter, n, dim, minx, maxx):
         # print iteration number and best fitness value so far
         if Iter % 10 == 0 and Iter > 1:
             print(
-                "Iter = " + str(Iter) + " best fitness = %.3f" % best_swarm_fitnessVal
+                "Iter = "
+                + str(Iter)
+                + " best fitness = %.3f" % swarm.best_swarm_fitnessVal
             )
 
-        for i in range(n):  # process each particle
+        for i in range(swarm.n_particles):  # process each particle
             # compute new velocity of curr particle
-            for k in range(dim):
+            for k in range(swarm.dim):
                 r1 = rnd.random()  # randomizations
                 r2 = rnd.random()
 
-                swarm[i].velocity[k] = (
-                    (w * swarm[i].velocity[k])
-                    + (c1 * r1 * (swarm[i].best_part_pos[k] - swarm[i].position[k]))
-                    + (c2 * r2 * (best_swarm_pos[k] - swarm[i].position[k]))
+                swarm.swarm[i].velocity[k] = (
+                    (w * swarm.swarm[i].velocity[k])
+                    + (
+                        c1
+                        * r1
+                        * (swarm.swarm[i].best_part_pos[k] - swarm.swarm[i].position[k])
+                    )
+                    + (c2 * r2 * (swarm.best_swarm_pos[k] - swarm.swarm[i].position[k]))
                 )
 
                 # if velocity[k] is not in [minx, max]
                 # then clip it
-                if swarm[i].velocity[k] < minx:
-                    swarm[i].velocity[k] = minx
-                elif swarm[i].velocity[k] > maxx:
-                    swarm[i].velocity[k] = maxx
+                if swarm.swarm[i].velocity[k] < swarm.minx:
+                    swarm.swarm[i].velocity[k] = swarm.minx
+                elif swarm.swarm[i].velocity[k] > swarm.maxx:
+                    swarm.swarm[i].velocity[k] = swarm.maxx
 
             # compute new position using new velocity
             for k in range(dim):
-                swarm[i].position[k] += swarm[i].velocity[k]
+                swarm.swarm[i].position[k] += swarm.swarm[i].velocity[k]
 
             # compute fitness of new position
-            swarm[i].fitness = fitness(swarm[i].position)
-            evaluations += 1
+            swarm.swarm[i].fitness = fitness(swarm.swarm[i].position)
 
             # is new position a new best for the particle?
-            if swarm[i].fitness < swarm[i].best_part_fitnessVal:
-                swarm[i].best_part_fitnessVal = swarm[i].fitness
-                swarm[i].best_part_pos = copy.copy(swarm[i].position)
+            if swarm.swarm[i].fitness < swarm.swarm[i].best_part_fitnessVal:
+                swarm.swarm[i].best_part_fitnessVal = swarm.swarm[i].fitness
+                swarm.swarm[i].best_part_pos = copy.copy(swarm.swarm[i].position)
 
             # is new position a new best overall?
-            if swarm[i].fitness < best_swarm_fitnessVal:
-                best_swarm_fitnessVal = swarm[i].fitness
-                best_swarm_pos = copy.copy(swarm[i].position)
+            if swarm.swarm[i].fitness < swarm.best_swarm_fitnessVal:
+                swarm.best_swarm_fitnessVal = swarm.swarm[i].fitness
+                swarm.best_swarm_pos = copy.copy(swarm.swarm[i].position)
 
-        for i in range(n):  # process each particle
+        for i in range(swarm.n_particles):  # process each particle
             # determine new apprentice
             # choose the minimum fitness
-            current_min = swarm[i].fitness
+            current_min = swarm.swarm[i].fitness
             global current_idx
             current_idx = i
-            for idx, particle in enumerate(swarm):
+            for idx, particle in enumerate(swarm.swarm):
                 particle.is_apprentice = False
 
                 if particle.fitness < current_min:
                     current_min = particle.fitness
                     current_idx = idx
-            swarm[current_idx].is_apprentice = True
-
-        if ENABLE_NM:
-            for i in range(n):  # process each particle
-                if swarm[i].is_apprentice:
-                    # run nm
-                    simplex = swarm[i].get_simplex()
-
-                    opt_simplex, new_evaluations = nm(simplex, 10)
-
-                    new_apprentice_pos = np.mean(opt_simplex, axis=0)
-                    # print("HABEMUS PAPAM: ", result)
-                    swarm[i].position = new_apprentice_pos
-                    evaluations += new_evaluations
-
-                    swarm[i].fitness = fitness(swarm[i].position)
-                    evaluations += 1
-
-                    # is new position a new best for the particle?
-                    if swarm[i].fitness < swarm[i].best_part_fitnessVal:
-                        swarm[i].best_part_fitnessVal = swarm[i].fitness
-                        swarm[i].best_part_pos = copy.copy(swarm[i].position)
-
-                    # is new position a new best overall?
-                    if swarm[i].fitness < best_swarm_fitnessVal:
-                        best_swarm_fitnessVal = swarm[i].fitness
-                        best_swarm_pos = copy.copy(swarm[i].position)
-
+            swarm.swarm[current_idx].is_apprentice = True
         # for-each particle
         Iter += 1
     # end_while
-    return best_swarm_pos, evaluations
+    return swarm
 
 
 # end pso
@@ -217,20 +216,61 @@ dim = 2
 fitness = fitness_rastrigin
 
 num_particles = 2
-max_iter = 20
-
+max_iter = 2
+nm_iter = 800
 print("Setting num_particles = " + str(num_particles))
 print("Setting max_iter    = " + str(max_iter))
 print("\nStarting algorithm\n")
 
-best_position, evaluations = pso(fitness, max_iter, num_particles, dim, -10.0, 10.0)
+swarm = Swarm(num_particles, dim, fitness, -10.0, 10.0)
+outer_iterations = 1
+
+eval = 0
+for _ in range(outer_iterations):
+    new_swarm = pso(swarm, max_iter)
+
+    # UNCOMMENT THIS TO ISOLATE NM
+    # new_swarm = swarm
+
+    # UNCOMMENT THIS TO ISOLATE NM
+    # new_swarm.swarm[0].is_apprentice = True
+
+    if ENABLE_NM:
+        for i in range(new_swarm.n_particles):  # process each particle
+            if new_swarm.swarm[i].is_apprentice:
+                # run nm
+                simplex = new_swarm.swarm[i].get_simplex()
+
+                opt_position = nm(simplex, nm_iter, new_swarm.best_swarm_fitnessVal)
+
+                new_swarm.swarm[i].position = opt_position
+
+                new_swarm.swarm[i].fitness = fitness(new_swarm.swarm[i].position)
+
+                # is new position a new best for the particle?
+                if new_swarm.swarm[i].fitness < new_swarm.swarm[i].best_part_fitnessVal:
+                    new_swarm.swarm[i].best_part_fitnessVal = new_swarm.swarm[i].fitness
+                    new_swarm.swarm[i].best_part_pos = copy.copy(
+                        new_swarm.swarm[i].position
+                    )
+
+                # is new position a new best overall?
+                if new_swarm.swarm[i].fitness < new_swarm.best_swarm_fitnessVal:
+                    new_swarm.best_swarm_fitnessVal = new_swarm.swarm[i].fitness
+                    new_swarm.best_swarm_pos = copy.copy(new_swarm.swarm[i].position)
+
+    # new_swarm = pso(new_swarm, max_iter)
+
+    swarm = new_swarm
+
+best_solution = swarm.best_solution()
 
 print("\nCompleted\n")
 print("\nBest solution found:")
-print(["%.6f" % best_position[k] for k in range(dim)])
-fitnessVal = fitness(best_position)
-print("fitness of best solution = %.6f" % fitnessVal)
-print("Number evaluations =", evaluations)
+print([best_solution[k] for k in range(dim)])
+fitnessVal = fitness(best_solution[0])
+print("fitness of best solution = ", fitnessVal)
+print("Number evaluations =", logger.get_evaluations())
 
 print("\nEnd particle swarm for rastrigin function\n")
 print()
