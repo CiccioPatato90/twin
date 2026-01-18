@@ -18,7 +18,7 @@ from simplex import nm
 
 # -------fitness functions---------
 
-ENABLE_NM = False
+ENABLE_NM = True
 
 
 # rastrigin function
@@ -63,6 +63,30 @@ class Particle:
         self.best_part_pos = copy.copy(self.position)
         self.best_part_fitnessVal = self.fitness  # best fitness
 
+    def get_simplex(self):
+        simplex = []
+
+        # Determine starting constants
+        start_angle = random.uniform(0, 2 * math.pi)
+        radius = np.linalg.norm(self.velocity)
+
+        # Loop 3 times to create 3 points
+        for i in range(3):
+            # Offset angle by 0, then 120 deg (2pi/3), then 240 deg (4pi/3)
+            theta = start_angle + i * (2 * math.pi / 3)
+
+            p = np.array(
+                [
+                    self.position[0] + radius * math.cos(theta),
+                    self.position[1] + radius * math.sin(theta),
+                ]
+            )
+            simplex.append(p)
+
+        return simplex
+
+        return simplex
+
 
 # particle swarm optimization function
 def pso(fitness, max_iter, n, dim, minx, maxx):
@@ -72,8 +96,6 @@ def pso(fitness, max_iter, n, dim, minx, maxx):
     c2 = 1.49445  # social (swarm)
 
     rnd = random.Random(0)
-
-    test = []
 
     # create n random particles
     swarm = [Particle(fitness, dim, minx, maxx, i) for i in range(n)]
@@ -156,15 +178,7 @@ def pso(fitness, max_iter, n, dim, minx, maxx):
             for i in range(n):  # process each particle
                 if swarm[i].is_apprentice:
                     # run nm
-                    simplex = [swarm[i].position]
-
-                    number = random.uniform(1, 3)
-                    simplex.append(
-                        [swarm[i].position[0], swarm[i].position[1] + number]
-                    )
-                    simplex.append(
-                        [swarm[i].position[0] + number, swarm[i].position[1]]
-                    )
+                    simplex = swarm[i].get_simplex()
 
                     opt_simplex, new_evaluations = nm(simplex, 10)
 
@@ -186,9 +200,6 @@ def pso(fitness, max_iter, n, dim, minx, maxx):
                         best_swarm_fitnessVal = swarm[i].fitness
                         best_swarm_pos = copy.copy(swarm[i].position)
 
-        # for i in range(n):
-        #     print(swarm[i].fitness, swarm[i].is_apprentice)
-
         # for-each particle
         Iter += 1
     # end_while
@@ -205,23 +216,16 @@ print("\nBegin particle swarm optimization on rastrigin function\n")
 dim = 2
 fitness = fitness_rastrigin
 
-
-print("Goal is to minimize Rastrigin's function in " + str(dim) + " variables")
-print("Function has known min = 0.0 at (", end="")
-for i in range(dim - 1):
-    print("0, ", end="")
-print("0)")
-
 num_particles = 2
 max_iter = 20
 
 print("Setting num_particles = " + str(num_particles))
 print("Setting max_iter    = " + str(max_iter))
-print("\nStarting PSO algorithm\n")
+print("\nStarting algorithm\n")
 
 best_position, evaluations = pso(fitness, max_iter, num_particles, dim, -10.0, 10.0)
 
-print("\nPSO completed\n")
+print("\nCompleted\n")
 print("\nBest solution found:")
 print(["%.6f" % best_position[k] for k in range(dim)])
 fitnessVal = fitness(best_position)

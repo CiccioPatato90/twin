@@ -75,7 +75,9 @@ def nm(simplex, max_iterations):
                 # Note: You need to update ALL points except u
                 print("Shrinking simplex")
                 for i in range(1, len(simplex)):
-                    simplex[i] = u + 0.5 * (simplex[i] - u)  # [cite: 87]
+                    simplex[i] = u + 0.5 * (
+                        np.array(simplex[i]) - np.array(u)
+                    )  # [cite: 87]
 
         # ---------------------------------------------------------
         # 5. Check Convergence [cite: 25]
@@ -112,7 +114,8 @@ def nm(simplex, max_iterations):
             #         best_pos = pos
             #         best_cost = new_cost
             # return best_pos, evaluations, cost(best_cost)
-            return simplex, evaluations
+            simplex.sort(key=cost)
+            return simplex[0], evaluations
     return simplex, evaluations
 
 
