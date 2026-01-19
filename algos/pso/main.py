@@ -110,8 +110,6 @@ class Particle:
 
         return simplex
 
-        return simplex
-
 
 # particle swarm optimization function
 def pso(swarm_ext, max_iter):
