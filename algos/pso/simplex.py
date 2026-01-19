@@ -3,30 +3,22 @@ import math
 import numpy as np
 from common import Logger
 
-logger = Logger("nm.txt")
-
-temp_log = float("inf")
+logger = Logger()
 
 
 def cost(position):
     # note: const = -fitness
-    global temp_log
     fitnessVal = 0.0
     for i in range(len(position)):
         xi = position[i]
         fitnessVal += (xi * xi) - (10 * math.cos(2 * math.pi * xi)) + 10
-    logger.increment()
-
-    if fitnessVal < temp_log:
-        temp_log = fitnessVal
-    logger._write_value(f"SIMPLEX: {temp_log}")
+    logger.log_best(fitnessVal, "SIMPLEX")
     return fitnessVal
 
 
 def nm(simplex, max_iterations, best_swarm_fitnessVal):
     # Need a loop to iterate
-    global temp_log
-    temp_log = best_swarm_fitnessVal
+    logger.sync_best(best_swarm_fitnessVal)
 
     for iteration in range(max_iterations):
         # 1. Sort [cite: 11]

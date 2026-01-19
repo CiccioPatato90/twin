@@ -2,6 +2,8 @@ import os
 
 
 class Logger:
+    _best_value = float("inf")
+
     def __init__(self, filename="evaluations.txt"):
         self.filename = filename
 
@@ -25,10 +27,14 @@ class Logger:
             f.write(str(value))
             f.write(str("\n"))
 
-    def increment(self):
-        return
-        current = self._read_value()
-        self._write_value(current + 1)
+    def log_best(self, value, prefix):
+        if value < Logger._best_value:
+            Logger._best_value = value
+        self._write_value(f"{prefix}: {Logger._best_value}")
+
+    def sync_best(self, value):
+        if value < Logger._best_value:
+            Logger._best_value = value
 
     def get_evaluations(self):
         return self._read_value()

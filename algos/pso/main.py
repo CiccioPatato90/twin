@@ -21,22 +21,16 @@ from simplex import nm
 
 ENABLE_NM = True
 
-logger = Logger("nm.txt")
-
-temp_log = float("inf")
+logger = Logger()
 
 
 # rastrigin function
 def fitness_rastrigin(position):
-    global temp_log
     fitnessVal = 0.0
     for i in range(len(position)):
         xi = position[i]
         fitnessVal += (xi * xi) - (10 * math.cos(2 * math.pi * xi)) + 10
-    logger.increment()
-    if fitnessVal < temp_log:
-        temp_log = fitnessVal
-    logger._write_value(f"SWARM: {temp_log}")
+    logger.log_best(fitnessVal, "SWARM")
     return fitnessVal
 
 
@@ -121,8 +115,7 @@ def pso(swarm_ext, max_iter):
     rnd = random.Random(0)
     swarm = copy.copy(swarm_ext)
 
-    global temp_log
-    temp_log = swarm.best_swarm_fitnessVal
+    logger.sync_best(swarm.best_swarm_fitnessVal)
 
     # computer best particle of swarm and it's fitness
     for i in range(swarm.n_particles):  # check each particle
@@ -214,14 +207,14 @@ dim = 2
 fitness = fitness_rastrigin
 
 num_particles = 2
-max_iter = 2
-nm_iter = 800
+max_iter = 20
+nm_iter = 1
 print("Setting num_particles = " + str(num_particles))
 print("Setting max_iter    = " + str(max_iter))
 print("\nStarting algorithm\n")
 
 swarm = Swarm(num_particles, dim, fitness, -10.0, 10.0)
-outer_iterations = 1
+outer_iterations = 50
 
 eval = 0
 for _ in range(outer_iterations):
