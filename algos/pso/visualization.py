@@ -1,108 +1,111 @@
-import glob
-import matplotlib.pyplot as plt
 import os
 
+import matplotlib.pyplot as plt
+
+
 def parse_file(filename):
-    swarm_x = []
-    swarm_y = []
-    simplex_x = []
-    simplex_y = []
-    
+    """
+    Parses the log file to extract evaluation counts and fitness values.
+    Returns lists of x (evaluations) and y (fitness).
+    """
     all_x = []
     all_y = []
 
-    with open(filename, 'r') as f:
+    if not os.path.exists(filename):
+        return [], []
+
+    with open(filename, "r") as f:
         lines = f.readlines()
-    
+
     evaluation_count = 0
     for line in lines:
         line = line.strip()
         if not line:
             continue
-        
+
         value = None
-        source = None
-        
-        if line.startswith("SWARM:"):
+
+        # Parse lines like "SWARM: 123.45" or "SIMPLEX: 123.45"
+        if line.startswith("SWARM:") or line.startswith("SIMPLEX:"):
             try:
                 value = float(line.split(":")[1].strip())
-                source = "SWARM"
-            except ValueError:
-                continue
-        elif line.startswith("SIMPLEX:"):
-            try:
-                value = float(line.split(":")[1].strip())
-                source = "SIMPLEX"
             except ValueError:
                 continue
         else:
-            # Try to parse bare number if any, though likely noise based on file sample
+            # Try to parse bare number
             try:
-                 # Check if it's just a number like "0"
-                 val = float(line)
-                 # We don't know the source, maybe just skip or treat as generic
-                 # Skipping to be safe and adhere to "color based on source"
-                 continue 
+                value = float(line)
             except ValueError:
                 continue
 
-        evaluation_count += 1
-        
-        all_x.append(evaluation_count)
-        all_y.append(value)
+        if value is not None:
+            evaluation_count += 1
+            all_x.append(evaluation_count)
+            all_y.append(value)
 
-        if source == "SWARM":
-            swarm_x.append(evaluation_count)
-            swarm_y.append(value)
-        elif source == "SIMPLEX":
-            simplex_x.append(evaluation_count)
-            simplex_y.append(value)
-            
-    return all_x, all_y, swarm_x, swarm_y, simplex_x, simplex_y
+    return all_x, all_y
+
 
 def main():
-    files = glob.glob("*.txt")
-    # Filter for relevant files just in case
-    files = [f for f in files if f in ['evaluations.txt', 'pso.txt', 'nm.txt']]
-    
-    if not files:
-        print("No .txt files found (evaluations.txt, pso.txt, nm.txt).")
+    # Configuration
+    file_configs = [
+        {"filename": "rastring/hybrid.txt", "label": "Hybrid", "color": "green"},
+        {"filename": "rastring/pso.txt", "label": "PSO", "color": "blue"},
+        {"filename": "rastring/nm.txt", "label": "NM SIMPLEX", "color": "red"},
+    ]
+
+    # 1. Parse all files first and store data
+    loaded_data = []
+
+    for config in file_configs:
+        fname = config["filename"]
+        x, y = parse_file(fname)
+
+        if x and y:
+            config["data_x"] = x
+            config["data_y"] = y
+            loaded_data.append(config)
+            print(f"Loaded {config['label']}: {len(x)} points")
+        else:
+            print(f"Warning: {fname} missing or empty.")
+
+    if not loaded_data:
+        print("No valid data found.")
         return
 
-    files.sort()
+    # 2. Find the minimum length among all loaded datasets
+    min_length = min(len(d["data_x"]) for d in loaded_data)
+    print(f"\nTruncating all datasets to the minimum length found: {min_length}")
 
-    for filename in files:
-        # Create a new figure for each file with a normal screen aspect ratio
-        plt.figure(figsize=(10, 6))
-        
-        all_x, all_y, swarm_x, swarm_y, simplex_x, simplex_y = parse_file(filename)
-        
-        # Plot the trajectory line first (thin, neutral color)
-        plt.plot(all_x, all_y, color='lightgray', linestyle='-', linewidth=1, label='Trajectory')
-        
-        # Plot Swarm points
-        if swarm_x:
-            plt.scatter(swarm_x, swarm_y, color='blue', s=15, label='Swarm (PSO)')
-        
-        # Plot Simplex points
-        if simplex_x:
-            plt.scatter(simplex_x, simplex_y, color='red', s=15, label='Simplex (NM)')
-            
-        count_text = f"Counts - SWARM: {len(swarm_x)}, SIMPLEX: {len(simplex_x)}"
-        plt.title(f"Optimization Progress - {filename}\n{count_text}")
-        plt.xlabel("Evaluations")
-        plt.ylabel("Cost / Fitness (Lower is better)")
-        plt.legend()
-        plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+    # 3. Plot truncated data
+    plt.figure(figsize=(12, 7))
 
-        # Construct output filename: e.g., plot_pso.png
-        base_name = os.path.splitext(filename)[0]
-        output_filename = f"plot_{base_name}.png"
-        
-        plt.tight_layout()
-        plt.savefig(output_filename)
-        print(f"Saved {output_filename}")
-        plt.close() # Close the figure to free memory
+    for config in loaded_data:
+        # Slice the data to min_length
+        x_trunc = config["data_x"][:min_length]
+        y_trunc = config["data_y"][:min_length]
+
+        plt.plot(
+            x_trunc,
+            y_trunc,
+            label=f"{config['label']} (n={min_length})",
+            color=config["color"],
+            linewidth=1.5,
+            alpha=0.8,
+        )
+
+    plt.title("Convergence Comparison (Truncated to shortest run)")
+    plt.xlabel("Evaluations")
+    plt.ylabel("Best Cost / Fitness (Lower is better)")
+    plt.legend()
+    plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+
+    output_filename = "rastring/comparison_plot.png"
+    plt.tight_layout()
+    plt.savefig(output_filename, dpi=300)
+    print(f"Saved combined graph to {output_filename}")
+    plt.close()
+
 
 if __name__ == "__main__":
     main()

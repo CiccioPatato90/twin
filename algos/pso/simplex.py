@@ -3,15 +3,33 @@ import math
 import numpy as np
 from common import Logger
 
-logger = Logger()
+logger = Logger("hybrid_grie.txt")
 
 
+# def cost(position):
+#     # note: const = -fitness
+#     fitnessVal = 0.0
+#     for i in range(len(position)):
+#         xi = position[i]
+#         fitnessVal += (xi * xi) - (10 * math.cos(2 * math.pi * xi)) + 10
+#     logger.log_best(fitnessVal, "SIMPLEX")
+#     return fitnessVal
 def cost(position):
-    # note: const = -fitness
-    fitnessVal = 0.0
+    sum_part = 0.0
+    prod_part = 1.0
+
     for i in range(len(position)):
         xi = position[i]
-        fitnessVal += (xi * xi) - (10 * math.cos(2 * math.pi * xi)) + 10
+        # Part 1: Summation term (x^2 / 4000)
+        sum_part += (xi * xi) / 4000.0
+        # Part 2: Product term (cos(x / sqrt(i)))
+        # We use (i + 1) because Python index starts at 0, but math index starts at 1
+        prod_part *= math.cos(xi / math.sqrt(i + 1))
+
+    # Combine the parts: Sum - Product + 1
+    fitnessVal = sum_part - prod_part + 1
+
+    # Log and return
     logger.log_best(fitnessVal, "SIMPLEX")
     return fitnessVal
 
