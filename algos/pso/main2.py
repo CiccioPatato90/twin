@@ -208,7 +208,6 @@ for outer in range(outer_iterations):
                 if new_swarm.swarm[i].fitness < new_swarm.best_swarm_fitnessVal:
                     new_swarm.best_swarm_fitnessVal = new_swarm.swarm[i].fitness
                     new_swarm.best_swarm_pos = copy.copy(new_swarm.swarm[i].position)
-
     swarm = new_swarm
 
 print("\nBest solution found:", swarm.best_swarm_pos)
